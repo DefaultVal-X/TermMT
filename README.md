@@ -39,6 +39,10 @@ First, we need to construct term dictionary and annotate sentences. Enter the fo
 ```bash
 bash datadeal.sh
 ```
+`datadeal.sh` will read `data/enwiktionary.jsonl` for dictionary construction. If it does not exist, it will automatically generate it from `data/wikiarticles.xml` using:
+```bash
+python scripts/dictdeal/xml_to_enwiktionary_jsonl.py --input_xml data/wikiarticles.xml --output_jsonl data/enwiktionary.jsonl
+```
 To ensure grammatical consistency, the dictionary needs to be grammatically checked. In particular, we placed our generated and manually checked dictionary files in `data/meaningdict_filtered.jsonl`.
  
 ## Mutant

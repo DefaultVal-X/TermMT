@@ -13,7 +13,6 @@ import dealmeaningtext
 import sys
 import logging
 import zhconv
-import parse_wikitext as pw
 import wikitextparser
 from wikitextparser import remove_markup, parse, Template
 import codecs
