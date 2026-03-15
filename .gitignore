@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 # ignore all files in the directory
+data/
 detect-1-sth/results/
 mutant-1-sth/results/
 preprocess-1-sth/results/
