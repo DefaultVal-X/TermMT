@@ -17,7 +17,17 @@ from tqdm import tqdm
 
 # print(sys.path)
 
-from scripts.translate.google_trans import translate_text_with_google, translate_text_with_google_batch
+# Import google_trans lazily to avoid credential errors when google model is not used
+google_trans_available = False
+translate_text_with_google = None
+translate_text_with_google_batch = None
+
+try:
+    from scripts.translate.google_trans import translate_text_with_google, translate_text_with_google_batch
+    google_trans_available = True
+except Exception as e:
+    print(f"Warning: google_trans not available, skipping google model: {e}")
+
 from scripts.translate.mbart import translate_mbart
 from scripts.translate.bing_translate import translate_text_with_bing, translate_text_with_bing_batch
 
@@ -55,6 +65,8 @@ def auto_translate(src: str, model: str) -> str:
     if src.strip() == "":
         return ""
     if model == "google":
+        if not google_trans_available:
+            raise RuntimeError("Google Translate is not available. Please check your credentials.")
         tgt = translate_text_with_google(src)
         # tgt = src
     elif model == "bing":
@@ -71,6 +83,8 @@ def auto_translate_batch(src: List[str], model: str) -> List[str]:
     if len(src) == 0:
         return []
     if model == "google":
+        if not google_trans_available:
+            raise RuntimeError("Google Translate is not available. Please check your credentials.")
         tgt = translate_text_with_google_batch(src)
     elif model == "bing":
         tgt = translate_text_with_bing_batch(src)

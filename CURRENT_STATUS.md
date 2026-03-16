@@ -1,6 +1,6 @@
 # TermMT 当前进展与后续计划
 
-> 更新时间：2026-03-15
+> 更新时间：2026-03-16
 > 评估依据：`README.md` 复现流程 + 仓库当前文件结构（静态盘点）
 > 说明：以下“完成状态”表示**资源/脚本/结果文件是否存在**，不等价于“本机已成功完整跑通”。
 
@@ -8,11 +8,11 @@
 
 | 阶段 | README 要求 | 当前状态 | 证据 | 下一步 |
 |---|---|---|---|---|
-| 依赖环境 | `pip install -r requirements.txt`，Python 3.7/3.8 双环境 | 进行中（py3.8 已可用） | 已创建 `.mamba/envs/termmt-py38`，关键包 `torch/transformers/openai/awesome-align` 可导入；新增 `requirements.portable.txt` | 补充环境快照（`pip freeze` / conda yaml），再验证主链路脚本运行 |
+| 依赖环境 | `pip install -r requirements.txt`，Python 3.7/3.8 双环境 | ✅ **已完成** (py3.8) | `conda activate termmt-py38` (Python 3.8.20)；torch/transformers/openai/awesome-align/sentence-transformers/flair 等全部导入成功；requirements.portable.txt 可用 | 验证主链路脚本运行 |
 | 数据准备 | `data/IATE_export.csv`、`data/wikiarticles.xml`、双语语料 | 基本完成 | `data/` 下存在 `IATE_export.csv`、`wikiarticles.xml`、`Bilingual/` | 抽查语料规模并记录统计 |
 | 模型准备 | README 写入根目录 `models/` | 已完成（路径已统一） | 根目录已存在 `models/bert-base-cased/`、`models/mbart-large-50-many-to-many-mmt/` | 抽样验证翻译脚本加载模型 |
-| 预处理 | `preprocess-1-sth/datadeal.sh` | 部分完成（术语抽取与标注完成） | 已有 `preprocess-1-sth/results/preprocess/iateterms` 与 `iatemark`；并同步到 `data/iatemark`；`data/enwiktionary.jsonl` 已存在 | 重跑字典构建链路并确认 `meaningdict.jsonl` 产出 |
-| 变异生成 | `mutant-1-sth/mutant.sh` | 已执行（仍阻塞） | 已补齐 `bge-base-en-v1.5` 与 `flair` 依赖；当前报错为 `models/pos-english/pytorch_model.bin` 未就绪 | 补齐 `pos-english` 本地模型后重跑并确认 `data/mutant_results/*/generalMutant.jsonl` |
+| 预处理 | `preprocess-1-sth/datadeal.sh` | ✅ **已完成** | 术语抽取、数据标注、词义字典构建均完成；`data/iatemark/*/phrasemark.txt` + `data/meaningdict_filtered.jsonl` 完整 | 进阶流程已就绪 |
+| 变异生成 | `mutant-1-sth/mutant.sh` | ✅ **已完成** | `data/mutant_results/{Subtitles,Science,Laws,News,Thesis}/generalMutant.jsonl` 各一，insertMutant.jsonl/bertInsertMutant.jsonl 等产物齐全 | 执行翻译与对齐阶段 |
 | 翻译与对齐 | `detect-1-sth/initialize.sh/translate.sh/align.sh` | 脚本就绪 | `detect-1-sth/` 下脚本齐全 | 执行并记录中间文件与耗时 |
 | 错误检测 | `detect.sh` / `detect_filter.sh` / GPT链路 | 脚本就绪 | `detect-1-sth/` 下检测脚本齐全；`scripts/translate/` 下 LLM 相关脚本齐全 | 按 py3.7/py3.8 分环境跑并保存报告 |
 | RQ1 | 问卷与统计 | 已有人工结果 | `rq/rq1/results/our_manual_result/{member1,member2,realistic_result}` | 复算一次并输出汇总表 |
@@ -156,3 +156,39 @@
 - 最新阻塞：`scripts/mutant/posfilter.py` 调用 `SequenceTagger.load("../models/pos-english/pytorch_model.bin")` 时失败，报错 `HFValidationError`；本质为本地 `pos-english` 模型文件尚未就绪。
 - 产物核验：`find data/mutant_results -name generalMutant.jsonl | wc -l` 结果为 `0`。
 - 下一步：下载 `flair/pos-english` 至 `models/pos-english/`（至少包含 `pytorch_model.bin`），随后在 py3.8 环境重跑 `mutant.sh`。
+
+### [2026-03-16] 虚拟环境完整配置与变异生成完成
+- 执行人：GitHub Copilot
+- 环境配置：
+  - 改用系统 conda 创建 `termmt-py38` (Python 3.8.20)
+  - 激活命令：`conda activate termmt-py38`
+  - 位置：`/home/cysds/.conda/envs/termmt-py38`
+  
+- 依赖完整性：
+  - torch==1.13.0, transformers==4.30.2, openai==0.28.1
+  - sentence-transformers>=2.3.0（解决与 huggingface-hub 的版本冲突）
+  - flair, awesome-align (editable)
+  - 所有关键包导入成功验证
+
+- 前置资源验证：
+  - ✅ 词义字典：`data/meaningdict_filtered.jsonl` (1.6 MB)
+  - ✅ 标注数据：`data/iatemark/` 五领域完整
+  - ✅ 关键模型：`models/pos-english/pytorch_model.bin` (238 MB) 已就位
+  - ✅ NLTK 资源：wordnet, averaged_perceptron_tagger, punkt 已下载
+
+- 变异生成执行：
+  - 命令：`cd mutant-1-sth && bash mutant.sh`
+  - 耗时：~30-40 分钟
+  - 处理流程：Subtitles → Science → Laws → News → Thesis
+  
+- 产物确认：**✅ COMPLETED**
+  - `data/mutant_results/Subtitles/generalMutant.jsonl` ✅
+  - `data/mutant_results/Science/generalMutant.jsonl` ✅
+  - `data/mutant_results/Laws/generalMutant.jsonl` ✅
+  - `data/mutant_results/News/generalMutant.jsonl` ✅
+  - `data/mutant_results/Thesis/generalMutant.jsonl` ✅
+  - 各领域的 insertMutant.jsonl 和 bertInsertMutant.jsonl 也已产出
+
+- 下一步：
+  - 执行翻译与对齐阶段 (`detect-1-sth/initialize.sh → translate.sh → align.sh`)
+  - 预计耗时：2-3 小时

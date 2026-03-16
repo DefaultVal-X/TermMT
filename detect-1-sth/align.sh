@@ -1,3 +1,9 @@
+#!/bin/bash
+# 加载环境变量
+if [ -f ../.env ]; then
+    export $(cat ../.env | grep -v '#' | xargs)
+fi
+
 for area in "Subtitles" "Science" "Laws" "News" "Thesis"
 do
     current_time="detect"
