@@ -2,11 +2,16 @@ import torch
 from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import zhconv
+import os
+from pathlib import Path
 
 device = "cuda:0"
 MBART_MODEL_HF = None
 MBART_TOKENIZER = None
-model_path = "../models/mbart-large"
+
+# Use absolute path to the model directory
+_current_dir = Path(__file__).parent.parent.parent
+model_path = str(_current_dir / "models" / "mbart-large-50-many-to-many-mmt")
 
 def translate_mbart(text: str, source: str, target: str):
     global MBART_MODEL_HF, MBART_TOKENIZER

@@ -8,7 +8,8 @@ from joblib import Parallel, delayed
 import os
 import json
 
-BING_SUBSCRIPTION_KEY = ""
+# Load Bing API key from environment variable
+BING_SUBSCRIPTION_KEY = os.getenv("BING_TRANSLATOR_KEY", "")
 
 def translate_text_with_bing(text: str) -> str:
     '''

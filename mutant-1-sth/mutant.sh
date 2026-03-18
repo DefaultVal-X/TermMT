@@ -4,6 +4,7 @@ iate_input_path="../data/iatemark"
 script_path="../scripts/mutant"
 dict_path="../data/meaningdict_filtered.jsonl"
 term_level="phrase"
+num_workers="${NUM_WORKERS:-4}"
 
 area="Thesis"
 mkdir -p "results"
@@ -24,6 +25,7 @@ do
         --input_path $iate_input_path \
         --output_path $iatephrase_output_path \
         --term_level $term_level \
-        --tgtarea $area
+        --tgtarea $area \
+        --num_workers $num_workers
     cp -r "$iate_output_path/$term_level/$area" "../data/mutant_results"
 done

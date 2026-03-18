@@ -16,7 +16,7 @@ python "$dict_script_path"/getIateTerm_only_phrase.py "$iate_path" "$iateout_pat
 # make dictionary
 data_path="../data"
 dict_script_path="../scripts/dictdeal"
-iate_terms_path="../data/iateterms/iate_phrase_term.txt"
+iate_terms_path="$iateout_path/iate_phrase_term.txt"
 enwiktionary_jsonl_path="$data_path/enwiktionary.jsonl"
 wiktionary_xml_path="$data_path/wikiarticles.xml"
 
@@ -38,8 +38,7 @@ python "$dict_script_path"/filterate.py "$folder_name/meaningdict.jsonl" "$folde
 
 # sentence marking data
 
-# dict_path="./$folder_name/meaningdict_filtered.jsonl"
-dict_path="../data/meaningdict_filtered.jsonl"
+dict_path="./$folder_name/meaningdict_filtered.jsonl"
 
 # iate terms mark
 mark_script_path="../scripts/mark"
@@ -55,3 +54,5 @@ do
 done
 
 cp -r "$folder_name/iatemark" "../data/iatemark"
+cp "$folder_name/meaningdict_filtered.jsonl" "../data/meaningdict_filtered.jsonl"
+cp "$iate_terms_path" "../data/iateterms/iate_phrase_term.txt"
