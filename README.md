@@ -52,6 +52,34 @@ bash mutant.sh
 ```
 The mutation results are in the `results` folder.
 
+### Resumable mutant run (recommended for large areas like News)
+
+If the process is killed by OOM, rerun the same command and it will continue from existing output files.
+
+```bash
+cd mutant-1-sth
+TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 conda run --no-capture-output -n termmt-gpu311 python ../scripts/mutant/mutant.py \
+	--meaningdict ../data/meaningdict_filtered.jsonl \
+	--input_path ../data/iatemark \
+	--output_path results/result_News-mutant/iatemutant/Bilingual/phrase \
+	--term_level phrase \
+	--tgtarea News \
+	--num_workers 1
+```
+
+After completion, sync outputs to `data/mutant_results`:
+
+```bash
+cd mutant-1-sth
+rm -rf ../data/mutant_results/News
+cp -r results/result_News-mutant/iatemutant/Bilingual/phrase/News ../data/mutant_results/
+```
+
+Notes:
+- The script now writes jsonl incrementally (line-by-line), so progress is persisted during execution.
+- On restart, it aligns `generalMutant.jsonl` / `insertMutant.jsonl` / `bertInsertMutant.jsonl` to the minimum common line count and resumes from there.
+- For memory-limited machines, start with `--num_workers 1`.
+
 ## Translate
 Enter the folder `detect-1-sth`. Before starting the translation process, first initialize:
 ```bash

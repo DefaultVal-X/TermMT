@@ -1,8 +1,8 @@
 # TermMT 当前进展与后续计划
 
-> 更新时间：2026-03-16
+> 更新时间：2026-03-20
 > 评估依据：`README.md` 复现流程 + 仓库当前文件结构（静态盘点）
-> 说明：以下“完成状态”表示**资源/脚本/结果文件是否存在**，不等价于“本机已成功完整跑通”。
+> 说明：以下状态已结合本机实际产物核验（截至 2026-03-20）。
 
 ## 1) 复现阶段完成度（对照 README）
 
@@ -13,8 +13,8 @@
 | 模型准备 | README 写入根目录 `models/` | 已完成（路径已统一） | 根目录已存在 `models/bert-base-cased/`、`models/mbart-large-50-many-to-many-mmt/` | 抽样验证翻译脚本加载模型 |
 | 预处理 | `preprocess-1-sth/datadeal.sh` | ✅ **已完成** | 术语抽取、数据标注、词义字典构建均完成；`data/iatemark/*/phrasemark.txt` + `data/meaningdict_filtered.jsonl` 完整 | 进阶流程已就绪 |
 | 变异生成 | `mutant-1-sth/mutant.sh` | ✅ **已完成** | `data/mutant_results/{Subtitles,Science,Laws,News,Thesis}/generalMutant.jsonl` 各一，insertMutant.jsonl/bertInsertMutant.jsonl 等产物齐全 | 执行翻译与对齐阶段 |
-| 翻译与对齐 | `detect-1-sth/initialize.sh/translate.sh/align.sh` | 脚本就绪 | `detect-1-sth/` 下脚本齐全 | 执行并记录中间文件与耗时 |
-| 错误检测 | `detect.sh` / `detect_filter.sh` / GPT链路 | 脚本就绪 | `detect-1-sth/` 下检测脚本齐全；`scripts/translate/` 下 LLM 相关脚本齐全 | 按 py3.7/py3.8 分环境跑并保存报告 |
+| 翻译与对齐 | `detect-1-sth/initialize.sh/translate.sh/align.sh` | 🟡 **部分完成** | `detect-1-sth/results/*-detect/` 已存在 `metamorphic_items.json`、`phrase_*mutants.txt`、`translate.log`（五领域）；但尚未看到明确的 alignment 结果文件 | 运行 `align.sh` 并补齐对齐产物核验 |
+| 错误检测 | `detect.sh` / `detect_filter.sh` / GPT链路 | ⏳ **待执行/待核验** | 当前可见主要为翻译阶段产物，未看到明确 bug report / detect_filter 收尾文件 | 按 py3.7/py3.8 分环境跑检测并沉淀报告 |
 | RQ1 | 问卷与统计 | 已有人工结果 | `rq/rq1/results/our_manual_result/{member1,member2,realistic_result}` | 复算一次并输出汇总表 |
 | RQ2 | 问卷与统计 | 已有人工结果 | `rq/rq2/results/our_manual_result/{member1,member2,precision}` | 复算一次并输出汇总表 |
 | RQ3 | 阈值影响 | 已有人工结果 | `rq/rq3/results/our_manual_result/{member1_termmt,member2_termmt,statistics-termmt}` | 复算并画阈值曲线 |
@@ -25,19 +25,17 @@
 
 ## 2) 发现的关键差异/风险
 
-1. （已解决）模型目录已在根目录 `models/` 下就位；需补充一次脚本侧加载验证记录。
-2. 仓库根目录未发现 `output/`（README/旧结构中可能提及）。
-3. 多处脚本与结果命名存在拼写差异（如 `percision`/`precision`、`precison`），易导致后续自动化脚本引用错误。
-4. 当前缺少“可复现运行日志”（命令、时间、输入版本、输出路径）的统一记录文件。
-5. `data/enwiktionary.jsonl` 已全量生成（`8503103` 行，约 `2.8G`）；但尚未看到重跑后生成的 `preprocess-1-sth/results/preprocess/meaningdict.jsonl`。
-6. `mutant-1-sth/mutant.sh` 在 py3.8 环境已实跑；`bge-base-en-v1.5` 已下载、`flair` 已安装，但目前仍缺 `models/pos-english/pytorch_model.bin`，导致未产出 `data/mutant_results/*/generalMutant.jsonl`。
+1. 对齐（align）与错误检测（detect/detect_filter/GPT judge）最终产物仍需统一核验并补收尾记录。
+2. 多处脚本与结果命名存在拼写差异（如 `percision`/`precision`、`precison`），易导致自动化脚本引用错误。
+3. 运行日志分散在 `CURRENT_STATUS.md`、`MUTANT_EXECUTION_LOG.md` 与各目录 `*.log`；建议维护一份统一“主链路执行总表”。
+4. `preprocess-1-sth/results/preprocess/meaningdict.jsonl` 当前未见，后续若重跑预处理需补产物校验。
 
 ## 3) 接下来执行计划（建议按优先级）
 
 ### P0（先做，保证可复现）
-- [ ] 统一模型路径：确认脚本读取位置，决定“迁移模型目录”或“更新 README/脚本参数”。
-- [ ] 新建运行日志模板（命令、环境、输入数据版本、输出目录、耗时、异常）。
-- [ ] 跑通主链路最小闭环：`datadeal -> mutant -> initialize/translate -> align -> detect`，并登记输出路径。
+- [ ] 跑通并核验后半段主链路：`align -> detect`（前半段 `datadeal -> mutant -> initialize/translate` 已有产物）。
+- [ ] 为 `detect-1-sth` 增加统一结果索引（每领域关键输出文件、行数、最后更新时间）。
+- [ ] 汇总一份“单机复现总表”（命令、环境、输入版本、输出目录、耗时、异常）。
 
 ### P1（结果核验）
 - [ ] 分别在 `rq1~rq4` 目录复算统计脚本，生成一份总表（便于与论文数字对照）。
@@ -63,99 +61,7 @@
 - 下一步：
 ```
 
-### [2026-03-15] 数据准备阶段复核与整理
-- 已确认：`data/IATE_export.csv`、`data/wikiarticles.xml`、`data/meaningdict_filtered.jsonl` 均存在。
-- 已确认：双语语料 `data/Bilingual` 五个领域齐全，行数为 `Subtitles 600000`、`Science 540000`、`Laws 440000`、`News 900000`、`Thesis 600000`。
-- 已整理：将 `preprocess-1-sth/results/preprocess/iatemark/*` 同步到 `data/iatemark/*`。
-- 已复核：`data/iatemark/*/phrasemark.txt` 行数为 `11931/48075/49451/98183/69493`（按 Subtitles/Science/Laws/News/Thesis）。
-- （更新）`data/enwiktionary.jsonl` 已补齐；当前阻塞已转为“下游字典/变异链路待重跑并产出结果文件”。
-
-### [2026-03-15] 补齐 Wiktionary 转换链路
-- 执行人：Copilot（自动执行）
-- 修改文件：
-	- `scripts/dictdeal/xml_to_enwiktionary_jsonl.py`（新增）
-	- `preprocess-1-sth/datadeal.sh`（缺失 `enwiktionary.jsonl` 时自动从 `wikiarticles.xml` 生成）
-	- `README.md`（补充中间文件生成说明）
-- 自测命令：
-	- `micromamba run -p .mamba/envs/termmt-py38 python scripts/dictdeal/xml_to_enwiktionary_jsonl.py --input_xml data/wikiarticles.xml --output_jsonl data/enwiktionary.sample.jsonl --max_pages 200`
-- 自测结果：
-	- 解析 200 页，写出 173 条 JSONL；每行结构包含 `title` 与 `text`，与 `dealjson.py` 读取字段一致。
-- 下一步：
-	- （更新）`data/enwiktionary.jsonl` 已全量生成；下一步为重跑 `preprocess-1-sth/datadeal.sh` 字典构建链路并确认 `meaningdict.jsonl`。
-
 ## 5) 今日状态日志
-
-### [2026-03-14] 初次盘点
-- 已完成：按 README 建立阶段清单并完成仓库静态核查。
-- 已确认：数据文件、主流程脚本、RQ 人工结果目录、CAT 与 GPT 讨论脚本基本齐全。
-- 待确认：主链路是否在当前机器可一键跑通；各阶段输出是否与论文一致。
-
-### [2026-03-14] 环境配置进展
-- 执行人：Copilot（自动执行）
-- 环境：系统仅有 `python3.12`，且缺失 `pip3` / `python3.12-venv`；`sudo` 需要密码，无法直接安装系统包。
-- 处理方案：
-	- 使用 `get-pip.py --user --break-system-packages` 安装用户态 `pip`。
-	- 使用 `virtualenv` 创建 `.venv312`（用于可安装性验证）。
-	- 用户态安装 `micromamba`，创建 `.mamba/envs/termmt-py38`（Python 3.8.20 + pip）。
-	- 因原 `requirements.txt` 含 `@ file:///...` 本机不存在路径，新增可移植依赖清单 `requirements.portable.txt`。
-- 已验证：
-	- `micromamba run -p .mamba/envs/termmt-py38 python -c "import torch, transformers, openai, awesome_align"` 通过。
-	- 关键版本：`torch 1.13.0+cu117`、`transformers 4.30.2`、`openai 0.28.1`。
-- 已归档：
-	- 环境导出：`env/termmt-py38.yml`
-	- 依赖冻结：`env/termmt-py38-freeze.txt`
-- 当前可用命令：
-	- 激活：`~/.local/bin/micromamba activate /mnt/e/vv/nuaa/nuaa_project/TermMT/.mamba/envs/termmt-py38`
-	- 单次运行：`~/.local/bin/micromamba run -p /mnt/e/vv/nuaa/nuaa_project/TermMT/.mamba/envs/termmt-py38 <command>`
-- 风险与备注：
-	- 原始 `requirements.txt` 不是纯可移植锁定文件（含本地构建路径），跨机器会失败。
-	- 目前先保证 py3.8 核心运行依赖可用；后续需决定是否维护官方 `requirements-portable`。
-- 下一步：按 README 开始跑主链路最小闭环并继续写入本文件。
-
-### [2026-03-15] 预处理执行记录（datadeal）
-- 执行命令：`cd preprocess-1-sth && micromamba run -p .mamba/envs/termmt-py38 bash datadeal.sh`
-- 运行耗时：`ELAPSED=36:16.84`（脚本返回 `EXIT=0`）
-- 运行前修复：
-	- `preprocess-1-sth/datadeal.sh` 中目录创建改为 `mkdir -p`（避免父目录不存在时报错）。
-	- `scripts/dictdeal/dealjson.py` 删除不存在且未使用的 `parse_wikitext` 导入。
-- 已产物：
-	- `preprocess-1-sth/results/preprocess/iateterms/iate_phrase_term.txt`（181KB）
-	- `preprocess-1-sth/results/preprocess/iatemark/*/phrasemark.txt`
-	- 行数统计：`Subtitles 11931`、`Science 48075`、`Laws 49451`、`News 98183`、`Thesis 69493`
-	- 同步目录：`data/iatemark/`（含各领域标注结果）
-- 未完成/阻塞：
-	- 字典构建链路失败：`dealjson.py` 报错缺少 `../data/enwiktionary.jsonl`。
-	- 因上一步失败，`results/preprocess/meaningdict.jsonl` 未生成，`filterate.py` 随后失败。
-- 结论：
-	- 预处理中的“术语提取+句子标注”已完成；“从 Wiktionary 构建 meaning dictionary”未完成。
-- 下一步：
-	- （更新）`data/enwiktionary.jsonl` 已就绪，待重跑 `datadeal.sh` 并确认 `results/preprocess/meaningdict.jsonl` 产出。
-
-### [2026-03-15] enwiktionary 后续现状复核（补记）
-- 已确认：`data/enwiktionary.jsonl` 已生成，行数 `8503103`，文件大小约 `2.8G`。
-- 已确认：根目录 `models/` 已存在，包含 `bert-base-cased/` 与 `mbart-large-50-many-to-many-mmt/`。
-- 已确认：`mutant-1-sth/results/` 已创建五个领域目录（`Subtitles/Science/Laws/News/Thesis` 对应目录结构已在）。
-- 当前阻塞：`data/mutant_results/` 仍为空，未发现 `*/generalMutant.jsonl`，因此 `detect-1-sth/initialize.sh` 的输入尚未就绪。
-- 文档待回填项：将“缺少 enwiktionary”相关旧结论统一改为“已补齐，待重跑并产出 meaningdict/mutant 输入”。
-
-### [2026-03-15] 变异阶段执行记录（mutant）
-- 执行人：Copilot（自动执行）
-- 环境：`~/.local/bin/micromamba run -p /mnt/e/vv/nuaa/nuaa_project/TermMT/.mamba/envs/termmt-py38`
-- 执行命令：`cd mutant-1-sth && micromamba run -p .mamba/envs/termmt-py38 bash mutant.sh`
-- 运行前修复：补装 `sentence-transformers` 到 `termmt-py38`（此前报 `ModuleNotFoundError: sentence_transformers`）。
-- 当前阻塞：`scripts/mutant/bgesimien.py` 初始化 `SentenceTransformer('../models/bge-base-en-v1.5')` 时失败，报错 `ValueError: Path ../models/bge-base-en-v1.5 not found`。
-- 产物状态：`data/mutant_results/` 仍为空（未生成 `*/generalMutant.jsonl`）。
-- 下一步：下载并放置 BGE 模型到 `models/bge-base-en-v1.5/` 后重跑 `mutant.sh`，成功标准为 5 个领域均产出 `generalMutant.jsonl`。
-
-### [2026-03-15] 变异阶段迭代补记（mutant）
-- 执行人：Copilot（自动执行）
-- 环境：`~/.local/bin/micromamba run -p /mnt/e/vv/nuaa/nuaa_project/TermMT/.mamba/envs/termmt-py38`
-- 迭代动作：
-	- 下载 BGE 模型到 `models/bge-base-en-v1.5/`（`BAAI/bge-base-en-v1.5`）。
-	- 安装依赖 `flair==0.13.1`（此前报 `ModuleNotFoundError: flair`）。
-- 最新阻塞：`scripts/mutant/posfilter.py` 调用 `SequenceTagger.load("../models/pos-english/pytorch_model.bin")` 时失败，报错 `HFValidationError`；本质为本地 `pos-english` 模型文件尚未就绪。
-- 产物核验：`find data/mutant_results -name generalMutant.jsonl | wc -l` 结果为 `0`。
-- 下一步：下载 `flair/pos-english` 至 `models/pos-english/`（至少包含 `pytorch_model.bin`），随后在 py3.8 环境重跑 `mutant.sh`。
 
 ### [2026-03-16] 虚拟环境完整配置与变异生成完成
 - 执行人：GitHub Copilot
@@ -192,3 +98,43 @@
 - 下一步：
   - 执行翻译与对齐阶段 (`detect-1-sth/initialize.sh → translate.sh → align.sh`)
   - 预计耗时：2-3 小时
+
+### [2026-03-18] News 领域可续跑能力更新（抗 Killed / OOM）
+- 背景：`News` 在 `--num_workers 2/4` 下多次被系统 `Killed`（exit 137），属于内存压力导致的进程终止。
+- 代码更新：`scripts/mutant/mutant.py`
+	- 新增增量写入：每条结果实时追加到 jsonl，避免“全量结束后才写盘”的丢进度问题。
+	- 新增断点续跑：启动时自动读取三类输出行数并对齐到最小行数，随后从对应 pair 继续处理。
+	- 保留并行限流：限制 in-flight futures，降低峰值内存。
+- 推荐续跑命令（可重复执行，自动续跑）：
+	- `cd mutant-1-sth`
+	- `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 conda run --no-capture-output -n termmt-gpu311 python ../scripts/mutant/mutant.py --meaningdict ../data/meaningdict_filtered.jsonl --input_path ../data/iatemark --output_path results/result_News-mutant/iatemutant/Bilingual/phrase --term_level phrase --tgtarea News --num_workers 1`
+- 结果同步命令（完成后执行）：
+	- `cd mutant-1-sth`
+	- `rm -rf ../data/mutant_results/News`
+	- `cp -r results/result_News-mutant/iatemutant/Bilingual/phrase/News ../data/mutant_results/`
+- 注意事项：
+	- 运行中三类 jsonl 行数可能临时不一致（若恰好在三次写盘之间被中断）；下次启动会自动对齐修复后继续。
+	- 当前机器建议 `News` 优先使用 `--num_workers 1`，稳定性优先于速度。
+
+### [2026-03-20] 变异结果全量复核（五领域）
+- 执行人：GitHub Copilot
+- 复核范围：`data/mutant_results` 产物行数 + `mutant-1-sth/results/result_*-mutant/.../mutant.log` 收尾统计。
+- 复核结论：五个领域均已完成，且 `generalMutant.jsonl` / `insertMutant.jsonl` / `bertInsertMutant.jsonl` 行数三者一致。
+- 行数结果：
+	- Subtitles: `5862 / 5862 / 5862`
+	- Science: `21666 / 21666 / 21666`
+	- Laws: `16925 / 16925 / 16925`
+	- News: `45143 / 45143 / 45143`
+	- Thesis: `32513 / 32513 / 32513`
+- 日志核验：
+	- Subtitles/Science/Laws/News/Thesis 均在各自 `mutant.log` 出现 `Drop stats for <Area>` 收尾段。
+	- Thesis 与 News 的续跑日志包含 `output line counts are inconsistent, aligning to min rows=...` 与 `resuming ...`，说明断点续跑逻辑已实际生效。
+- 备注：当前 `data/mutant_results` 已可作为 `detect-1-sth` 后续流程输入。
+
+### [2026-03-20] 复现阶段完成度同步（对照 README）
+- 执行人：GitHub Copilot
+- 同步范围：`CURRENT_STATUS.md` 第 1 节“复现阶段完成度（对照 README）”。
+- 同步结论：
+	- `mutant` 五领域产物完整，行数一致（已在上一条记录确认）。
+	- `detect-1-sth` 已存在五领域翻译阶段中间产物（`metamorphic_items.json`、`phrase_*mutants.txt`、`translate.log`）。
+	- 对齐（align）与错误检测（detect/detect_filter/GPT judge）的最终结果文件仍需补跑或补核验。

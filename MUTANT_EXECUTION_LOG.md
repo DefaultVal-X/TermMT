@@ -141,3 +141,22 @@ bash initialize.sh && bash translate.sh && bash align.sh
 **监控脚本**: `/home/cysds/TermMT/check_mutant_progress.sh`
 
 运行 `bash check_mutant_progress.sh` 查看当前状态
+
+---
+
+## 更新记录（2026-03-20）
+
+### 最终状态
+- ✅ 五领域变异生成已完成（包含多次断点续跑后的收敛结果）。
+- ✅ `data/mutant_results` 下每个领域三类文件行数一致，可直接进入后续检测流程。
+
+### 最终行数（general / insert / bertInsert）
+- Subtitles: `5862 / 5862 / 5862`
+- Science: `21666 / 21666 / 21666`
+- Laws: `16925 / 16925 / 16925`
+- News: `45143 / 45143 / 45143`
+- Thesis: `32513 / 32513 / 32513`
+
+### 说明
+- News 与 Thesis 在执行中曾多次出现 OOM/Killed（exit 137）。
+- `scripts/mutant/mutant.py` 已支持增量写盘与断点续跑，对齐后可继续处理，最终已完成全量产物。
