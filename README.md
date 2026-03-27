@@ -90,6 +90,14 @@ Then, translate the original sentences and mutated sentence:
 bash translate.sh
 ```
 
+API configuration (loaded from `.env`):
+- `BING_TRANSLATOR_KEY`: required when using model `bing`.
+- `GOOGLE_TRANSLATE_API_KEY`: required when using model `google`.
+
+Notes:
+- `scripts/translate/google_trans.py` uses Google Translate REST API (API key mode), not `google.cloud` local credential client mode.
+- If `translate.sh` keeps only `mbart` and `bing`, then Google key is optional.
+
 ## Alignment
 For the alignment step, please follow the steps in https://github.com/neulab/awesome-align to prepare the required model, then go to the folder `detect-1-sth` and run the following command:
 ```bash

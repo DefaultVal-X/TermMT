@@ -124,23 +124,45 @@ def translate(sentence_info_folder: str, sentence_info_filename: str, model: str
         sentence_dict = read_src_tgt_from_json(already_file)
     else:
         sentence_dict = dict()
+
+    sentence_lst = []
+    with open(sentence_info_path, 'r', encoding='utf8') as sip:
+        for line in sip:
+            sentence_lst.append(line.strip())
+
+    existing_tmp_result = {}
     if os.path.exists(tmp_result_path):
         with open(tmp_result_path, 'r', encoding='utf8') as trp:
-            tmp_result = json.load(trp)
+            existing_tmp_result = json.load(trp)
 
-                    
-    else:
-        sentence_lst = list()
-        with open(sentence_info_path, 'r', encoding='utf8') as sip:
-            for line in sip:
-                sentence_lst.append(line.strip())
-        tmp_result = dict()
-        for index, src in enumerate(sentence_lst):
-            tmp_result[str(index)] = dict()
-            tmp_result[str(index)]['SRC'] = src
-        with open(tmp_result_path, 'w', encoding='utf8') as trp:
-            json.dump(tmp_result, trp, ensure_ascii=False, indent=3)
-            # json.dump(tmp_result, trp, ensure_ascii=False, indent=3, sort_keys=True, default=convert_keys_to_int)
+    # Rebuild the task list from current source file every run to avoid stale
+    # partial tmp json limiting processing to old record counts.
+    existing_by_src = {}
+    for item in existing_tmp_result.values():
+        src = item.get('SRC')
+        if not src:
+            continue
+        if item.get('TGT', None) is not None:
+            existing_by_src[src] = {
+                'TGT': item.get('TGT'),
+                'TIME': item.get('TIME'),
+                'Data_time': item.get('Data_time'),
+            }
+
+    tmp_result = {}
+    for index, src in enumerate(sentence_lst):
+        tmp_result[str(index)] = {'SRC': src}
+        if sentence_dict.get(src, None) is not None:
+            tmp_result[str(index)]['TGT'] = sentence_dict[src]['TGT']
+            tmp_result[str(index)]['TIME'] = sentence_dict[src]['TIME']
+            tmp_result[str(index)]['Data_time'] = sentence_dict[src]['Data_time']
+        elif existing_by_src.get(src, None) is not None:
+            tmp_result[str(index)]['TGT'] = existing_by_src[src]['TGT']
+            tmp_result[str(index)]['TIME'] = existing_by_src[src]['TIME']
+            tmp_result[str(index)]['Data_time'] = existing_by_src[src]['Data_time']
+
+    with open(tmp_result_path, 'w', encoding='utf8') as trp:
+        json.dump(tmp_result, trp, ensure_ascii=False, indent=3)
     CHUNK_SIZE = 10
     SAVE_INTERVAL = 1
     lst = sorted([int(k) for k in tmp_result.keys()])

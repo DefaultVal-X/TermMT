@@ -1,37 +1,44 @@
-
 import os
 from typing import List
-from joblib import Parallel, delayed
 
-import os
-import json
+import requests
 
-"""Translates text into the target language.
 
-Make sure your project is allowlisted.
+# Google Cloud Translation API v2 endpoint (API key auth)
+GOOGLE_TRANSLATE_ENDPOINT = "https://translation.googleapis.com/language/translate/v2"
+GOOGLE_TRANSLATE_API_KEY = os.getenv("GOOGLE_TRANSLATE_API_KEY", "")
 
-Target must be an ISO 639-1 language code.
-See https://g.co/cloud/translate/v2/translate-reference#supported_languages
 
-Copied from https://cloud.google.com/translate/docs/samples/translate-text-with-model
-"""
-from google.cloud import translate_v2 as translate
+def _translate_with_google_api(texts: List[str], target: str = "zh", model: str = "nmt") -> List[str]:
+    if GOOGLE_TRANSLATE_API_KEY == "":
+        raise RuntimeError("GOOGLE_TRANSLATE_API_KEY is not set")
 
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../../assets/application_default_credentials.json"
-translate_client = translate.Client()
+    if len(texts) == 0:
+        return []
 
-def translate_text_with_google(text: str, target='zh', model="nmt") -> str:
-    global translate_client
+    payload = {
+        "q": texts,
+        "target": target,
+        "format": "text",
+        "model": model,
+        "key": GOOGLE_TRANSLATE_API_KEY,
+    }
 
+    response = requests.post(GOOGLE_TRANSLATE_ENDPOINT, data=payload, timeout=60)
+    response.raise_for_status()
+    data = response.json()
+
+    if "data" not in data or "translations" not in data["data"]:
+        raise RuntimeError(f"Unexpected Google Translate response: {data}")
+
+    return [item.get("translatedText", "") for item in data["data"]["translations"]]
+
+
+def translate_text_with_google(text: str, target: str = "zh", model: str = "nmt") -> str:
     if isinstance(text, bytes):
         text = text.decode("utf-8")
-    # Text can also be a sequence of strings, in which case this method
-    # will return a sequence of results for each text.
-    result = translate_client.translate(text, target_language=target, model=model)
-    return result["translatedText"]
+    return _translate_with_google_api([text], target=target, model=model)[0]
 
-def translate_text_with_google_batch(text: List[str], target='zh', model="nmt") -> List[str]:
-    ret = Parallel(n_jobs=32, backend="threading")(delayed(translate_text_with_google)(t, target=target, model=model) for t in text)
-    return ret
 
-# print(translate_text_with_google("(3) In addition to the requirements of subregulation (1) there shall be provided in any such spaces containing internal combustion (the process where fuel is burned within an engine such as a diesel engine, producing power directly as opposed to externally such as in a steam engine) type machinery-"))
+def translate_text_with_google_batch(text: List[str], target: str = "zh", model: str = "nmt") -> List[str]:
+    return _translate_with_google_api(text, target=target, model=model)
