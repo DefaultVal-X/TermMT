@@ -12,7 +12,7 @@ do
     align_tool_path=../awesome-align
     for trans_model in "google" "bing" "mbart"
     do
-        python ${scripts_path}/trans_align.py \
+        conda run -n termmt-gpu311 python ${scripts_path}/trans_align.py \
             --output_path $output_path \
             --align_tool_path $align_tool_path \
             --trans_model $trans_model 

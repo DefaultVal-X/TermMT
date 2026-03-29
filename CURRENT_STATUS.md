@@ -1,6 +1,6 @@
 # TermMT 当前进展与后续计划
 
-> 更新时间：2026-03-23
+> 更新时间：2026-03-29
 > 评估依据：`README.md` 复现流程 + 仓库当前文件结构（静态盘点）
 > 说明：以下状态已结合本机实际产物核验（截至 2026-03-20）。
 
@@ -13,8 +13,8 @@
 | 模型准备 | README 写入根目录 `models/` | 已完成（路径已统一） | 根目录已存在 `models/bert-base-cased/`、`models/mbart-large-50-many-to-many-mmt/` | 抽样验证翻译脚本加载模型 |
 | 预处理 | `preprocess-1-sth/datadeal.sh` | ✅ **已完成** | 术语抽取、数据标注、词义字典构建均完成；`data/iatemark/*/phrasemark.txt` + `data/meaningdict_filtered.jsonl` 完整 | 进阶流程已就绪 |
 | 变异生成 | `mutant-1-sth/mutant.sh` | ✅ **已完成** | `data/mutant_results/{Subtitles,Science,Laws,News,Thesis}/generalMutant.jsonl` 各一，insertMutant.jsonl/bertInsertMutant.jsonl 等产物齐全 | 执行翻译与对齐阶段 |
-| 翻译与对齐 | `detect-1-sth/initialize.sh/translate.sh/align.sh` | 🟡 **部分完成（Bing 阻塞）** | `detect-1-sth/results/*-detect/` 已存在 `metamorphic_items.json`、`phrase_*mutants.txt`、`translate.log`（五领域）；近期 Bing 调用返回 `401 Unauthorized`，Google 可用；尚未看到明确的 alignment 结果文件 | 更新 Bing 凭据/订阅额度后重跑 translate，再执行 `align.sh` 核验对齐产物 |
-| 错误检测 | `detect.sh` / `detect_filter.sh` / GPT链路 | ⏳ **待执行/待核验** | 当前可见主要为翻译阶段产物，未看到明确 bug report / detect_filter 收尾文件 | 按 py3.7/py3.8 分环境跑检测并沉淀报告 |
+| 翻译与对齐 | `detect-1-sth/initialize.sh/translate.sh/align.sh` | 🟡 **已完成（除 Thesis bing）** | 四领域（Subtitles/Science/Laws/News）已生成 `metamorphic_items_aligned_{bing,google,mbart}.json(.jsonl)`；`Thesis` 的 `bing` 仍缺失 | 补齐 Thesis 的 bing 翻译/对齐，或明确“跳过 Thesis bing”的复现口径 |
+| 错误检测 | `detect.sh` / `detect_filter.sh` / GPT链路 | 🟡 **已完成（四领域三模型）** | `detect-1-sth/results/{Subtitles,Science,Laws,News}-detect/error_{bing,google,mbart}` 及 `metamorphic_items_final_*.json` 已生成 | 执行 `detect_filter.sh` 与 GPT 链路；决定 Thesis 是否补齐 |
 | RQ1 | 问卷与统计 | 已有人工结果 | `rq/rq1/results/our_manual_result/{member1,member2,realistic_result}` | 复算一次并输出汇总表 |
 | RQ2 | 问卷与统计 | 已有人工结果 | `rq/rq2/results/our_manual_result/{member1,member2,precision}` | 复算一次并输出汇总表 |
 | RQ3 | 阈值影响 | 已有人工结果 | `rq/rq3/results/our_manual_result/{member1_termmt,member2_termmt,statistics-termmt}` | 复算并画阈值曲线 |
@@ -25,8 +25,8 @@
 
 ## 2) 发现的关键差异/风险
 
-1. 对齐（align）与错误检测（detect/detect_filter/GPT judge）最终产物仍需统一核验并补收尾记录。
-2. 翻译阶段当前阻断点为 Bing 鉴权失败（`401 Unauthorized` / `401001`）；结合近期现象，疑似订阅额度耗尽或密钥与资源不匹配。
+1. 对齐与 detect 已覆盖四领域三模型，但 `Thesis` 的 bing 仍缺（翻译/对齐/检测链路未闭环），且 `detect_filter` / GPT judge 尚未统一收尾。
+2. 翻译阶段当前阻断点为 Bing 鉴权失败（`401 Unauthorized` / `401001`）；结合近期现象，疑似订阅额度耗尽或密钥与资源不匹配，导致 `Thesis` 的 Bing 翻译与对齐未完成。
 3. 多处脚本与结果命名存在拼写差异（如 `percision`/`precision`、`precison`），易导致自动化脚本引用错误。
 4. 运行日志分散在 `CURRENT_STATUS.md`、`MUTANT_EXECUTION_LOG.md` 与各目录 `*.log`；建议维护一份统一“主链路执行总表”。
 5. `preprocess-1-sth/results/preprocess/meaningdict.jsonl` 当前未见，后续若重跑预处理需补产物校验。
@@ -34,7 +34,7 @@
 ## 3) 接下来执行计划（建议按优先级）
 
 ### P0（先做，保证可复现）
-- [ ] 跑通并核验后半段主链路：`align -> detect`（前半段 `datadeal -> mutant -> initialize/translate` 已有产物）。
+- [ ] 跑通并核验后半段主链路：`align -> detect -> detect_filter/GPT`（当前仅缺 `bing/Thesis`）。
 - [ ] 为 `detect-1-sth` 增加统一结果索引（每领域关键输出文件、行数、最后更新时间）。
 - [ ] 汇总一份“单机复现总表”（命令、环境、输入版本、输出目录、耗时、异常）。
 
@@ -164,32 +164,6 @@
 - 后续动作：
   - 更新 `.env` 中 `BING_TRANSLATOR_KEY`（必要时补 `BING_TRANSLATOR_REGION`）后优先重测 News。
   - Bing 恢复前，可先用 `mbart + google` 路线推进翻译与后续对齐。
-
-### [2026-03-22] Bing 翻译完成度整理（用于下次续跑）
-- 执行人：GitHub Copilot
-- 统计口径：以 `detect-1-sth/results/<Area>-detect/*.txt` 的输入行数，对比 `translation/bing/*_translations.txt` 输出行数。
-
-| Area | trans_file | 输入行数 | Bing 输出行数 | 状态 |
-|---|---:|---:|---:|---|
-| Subtitles | originSentences.txt | 5862 | 5862 | ✅ DONE |
-| Subtitles | phrase_infoinsertmutants.txt | 5862 | 5862 | ✅ DONE |
-| Subtitles | phrase_bertinsertmutants.txt | 4788 | 4788 | ✅ DONE |
-| Science | originSentences.txt | 21666 | 21666 | ✅ DONE |
-| Science | phrase_infoinsertmutants.txt | 21666 | 21666 | ✅ DONE |
-| Science | phrase_bertinsertmutants.txt | 16282 | 16282 | ✅ DONE |
-| Laws | originSentences.txt | 16925 | 16925 | ✅ DONE |
-| Laws | phrase_infoinsertmutants.txt | 16925 | 16925 | ✅ DONE |
-| Laws | phrase_bertinsertmutants.txt | 16650 | 16650 | ✅ DONE |
-| News | originSentences.txt | 45143 | 6 | 🟡 PARTIAL |
-| News | phrase_infoinsertmutants.txt | 45143 | 6 | 🟡 PARTIAL |
-| News | phrase_bertinsertmutants.txt | 32085 | 66 | 🟡 PARTIAL |
-| Thesis | originSentences.txt | 32513 | 1 | 🟡 PARTIAL |
-| Thesis | phrase_infoinsertmutants.txt | 32513 | 1 | 🟡 PARTIAL |
-| Thesis | phrase_bertinsertmutants.txt | 21983 | 0 | ⏳ PENDING |
-
-- 已跑完范围：`Subtitles + Science + Laws`（3 领域 × 3 文件全完成）。
-- 待续跑范围：`News + Thesis`（共 6 个任务）。
-
 #### 下次直接续跑命令（仅跑未完成项）
 
 ```bash
@@ -208,28 +182,6 @@ done
 
 - 说明：当前 `translate.py` 对 bing 任务是“按任务重跑”语义，不是逐行断点续传；上面命令已经把范围缩小到未完成组合，能最快恢复到可继续状态。
 
-### [2026-03-23] 翻译现状快照（三模型：Bing / Google / mBART）
-- 执行人：GitHub Copilot
-- 统计口径：比较 `detect-1-sth/results/<Area>-detect/<trans_file>.txt` 输入行数与 `translation/<model>/<trans_file>_translations.txt` 输出行数。
-
-
-| Area | Model | originSentences | phrase_infoinsertmutants | phrase_bertinsertmutants | 结论 |
-|---|---|---:|---:|---:|---|
-| Subtitles | bing | 5862/5862 | 5862/5862 | 4788/4788 | ✅ 全完成 |
-| Science | bing | 21666/21666 | 21666/21666 | 16282/16282 | ✅ 全完成 |
-| Laws | bing | 16925/16925 | 16925/16925 | 16650/16650 | ✅ 全完成 |
-| News | bing | 6/45143 | 6/45143 | 66/32085 | 🟡 部分完成 |
-| Thesis | bing | 1/32513 | 1/32513 | 0/21983 | 🟡 部分/未开始 |
-| Subtitles | google | 5862/5862 | 5862/5862 | 4788/4788 | ✅ 全完成 |
-| Science | google | 21666/21666 | 21666/21666 | 1628/16652/16282 | ✅ 全完成 |
-| Laws | google | 16925/16925 | 16925/16925 | 00 | 🟡 部分完成 |
-| News | google | 45143/45143 | 45143/45143 | 32085/32085 | ✅ 全完成 |
-| Thesis | google | 32513/32513 | 0/32513 | 0/21983 | 🟡 部分完成 |
-| Subtitles | mbart | 5862/5862 | 5862/5862 | 4788/4788 | ✅ 全完成 |
-| Science | mbart | 21666/21666 | 21666/21666 | 1202/16282 | 🟡 2/3完成，bertinsert跑到74% |
-| Laws | mbart | 0/16925 | 0/16925 | 0/16650 | ⏳ 未开始 |
-| News | mbart | 0/45143 | 0/45143 | 66/32085 | 🟡 仅bertinsert部分完成 |
-| Thesis | mbart | 0/32513 | 0/32513 | 0/21983 | ⏳ 未开始 |
 
 - 目录现状要点：
   - `google` 子目录目前仅在 `Subtitles`、`Science` 存在。
@@ -271,26 +223,84 @@ for area in Science Laws News Thesis; do
 done
 ```
 
-### [2026-03-24] mBART 实际进度核查与续跑准备
+
+### [2026-03-27] 三模型翻译进度同步（最新）
 - 执行人：GitHub Copilot
-- 统计口径：实际查找 `detect-1-sth/results/<Area>-detect/translation/mbart/*_translations.txt` 文件并统计行数。
-- 实际现状：
+- 统计口径：逐项对比 `detect-1-sth/results/<Area>-detect/<file>.txt` 输入行数与 `translation/<model>/<file>_translations.txt` 输出行数。
+- 汇总结论：
+  - `bing`: `14/15` 完成，剩余 `32512` 行。
+  - `google`: `15/15` 完成，剩余 `0` 行。
+  - `mbart`: `15/15` 完成，剩余 `0` 行。
+- 当前唯一未完成项（Bing）：
+  - `Area=Thesis`
+  - `File=phrase_infoinsertmutants.txt`
+  - `input=32513`, `output=1`, `remaining=32512`
+- 续跑命令（仅剩余 1 项）：
 
-| Area | originSentences | phrase_infoinsertmutants | phrase_bertinsertmutants | 结论 |
-|---|---:|---:|---:|---|
-| Subtitles | 5862/5862 ✅ | 5862/5862 ✅ | 4788/4788 ✅ | ✅ 全完成 |
-| Science | 21666/21666 ✅ | 21666/21666 ✅ | 16282/16282 ✅ | ✅ 全完成 |
-| Laws | 16925/16925 ✅ | 16925/16925 ✅ | 0/16650 ⏳ | 🟡 2/3 完成，缺 phrase_bertinsertmutants |
-| News | 0/45143 ⏳ | 0/45143 ⏳ | 66/32085 🟡 | 🟡 仅 phrase_bertinsertmutants 部分完成 |
-| Thesis | 0/32513 ⏳ | 0/32513 ⏳ | 0/21983 ⏳ | ⏳ 全未开始 |
+```bash
+cd /home/cysds/TermMT/detect-1-sth
+set -a && source ../.env && set +a
 
-- 待续跑任务（共 7 项）：
-  1. `Laws / phrase_bertinsertmutants.txt`（0/16650）
-  2. `News / originSentences.txt`（0/45143）
-  3. `News / phrase_infoinsertmutants.txt`（0/45143）
-  4. `News / phrase_bertinsertmutants.txt`（66/32085，续补）
-  5. `Thesis / originSentences.txt`（0/32513）
-  6. `Thesis / phrase_infoinsertmutants.txt`（0/32513）
-  7. `Thesis / phrase_bertinsertmutants.txt`（0/21983）
+/home/cysds/.conda/envs/termmt-py38/bin/python ../scripts/translate/translate.py \
+  --area Thesis --time detect --model bing --trans_file phrase_infoinsertmutants.txt
+```
 
-- 下一步：立即启动 mbaRT 续跑（使用 GPU 环境 `termmt-gpu311` 推荐）。
+- 下一步：等待该单项跑完后，再次对账确认 `bing` 达到 `15/15`。
+
+### [2026-03-27] 对齐与模型准备阶段推进
+- 执行人：GitHub Copilot
+- 完成动作：
+  - ✅ BGE 向量模型下载完成：`models/bge-base-zh-v1.5/` （~500 MB）
+  - ✅ awesome-align 对齐模型下载完成：`awesome-align/models/model_without_co/`（已下载 ZIP 并解压）
+  
+- 对齐阶段诊断：
+  - 执行命令：`cd detect-1-sth && bash align.sh`
+  - 执行结果：**Exit Code 1**（多次重试均失败）
+  - 已采取措施：
+    - 验证 jieba 库已正常安装（ImportCheck passed）
+    - 验证模型文件目录已就位（awesome-align/models/model_without_co/）
+    - 移除 `--no-capture-output`，准备捕获完整错误日志
+  - 当前阻塞：align.sh 内部脚本执行失败原因未明，需查看完整错误堆栈
+  
+- 问题排查与修复：
+  - **根本原因**：
+    1. align.sh 直接执行 python，未激活 conda 环境 → **已修复** ✅
+    2. awesome-align 使用 GPU (CUDA)，PyTorch 版本不兼容 RTX 5060 Ti → **已修复** ✅
+    3. trans_align.py 的子进程调用 run_align.py 时也没有通过 conda 环境 → **已修复** ✅
+  
+  - **修复方案**与实施：
+    1. 修改 align.sh：`python` → `conda run -n termmt-py38 python` ✅
+    2. 修改 trans_align.py：get_align_file() 中添加 `--no_cuda` 参数 ✅
+    3. 修改 trans_align.py：子进程调用改为 `conda run -n termmt-py38 python` + `--no_cuda` ✅
+  
+  - **执行状态**：
+    - 第一次修复尝试：CUDA 错误 ❌
+    - 第二次修复尝试（当前）：使用正确的 conda 环境 + CPU 对齐 🔄（后台运行中）
+    - Terminal ID：7c978925-ba3b-41a6-9aa6-6d102626b6af
+    - **预计耗时**：1～3 小时（15 个任务，CPU 对齐较慢）
+  
+- 监控进度指标：
+  - 检查 各领域 `align_*/origin_align.txt` 文件是否非空
+  - 确保每个领域的三个模型都生成了对齐结果
+  
+- 下一步（优先级）：
+  1. 待对齐完成后，验证五个领域产物完整性
+  2. 启动检测阶段（detect.sh / detect_filter.sh）
+
+### [2026-03-28] 对齐产物落盘核验（最新）
+- 执行人：Codex
+- 核验方式：检查 `detect-1-sth/results/*-detect/align_*` 目录中 `origin_align.txt` 是否存在且非空。
+- 核验结论（google）：五领域全部完成（Subtitles/Science/Laws/News/Thesis）。
+- 核验结论（mbart）：五领域全部完成（Subtitles/Science/Laws/News/Thesis）。
+- 核验结论（bing）：除 `Thesis` 外其余四领域已完成，`Thesis/align_bing` 仍缺失。
+- 关键文件示例（均在 2026-03-27~2026-03-28 生成）：`detect-1-sth/results/News-detect/align_bing/origin_align.txt`；`detect-1-sth/results/Thesis-detect/align_google/origin_align.txt`；`detect-1-sth/results/Thesis-detect/align_mbart/origin_align.txt`
+- 下一步：补齐 Bing 的 `Thesis/phrase_infoinsertmutants` 翻译后执行 `align.sh` 仅补 `Thesis/align_bing`；对齐全量完成后立即进入 `detect.sh` / `detect_filter.sh`。
+
+### [2026-03-29] detect 阶段完成（四领域三模型）
+- 执行人：Codex
+- 覆盖范围：`Subtitles/Science/Laws/News` × `bing/google/mbart`
+- 产物确认：
+  - `detect-1-sth/results/<Area>-detect/error_{bing,google,mbart}/` 已生成
+  - `metamorphic_items_final_{bing,google,mbart}.json` 已生成
+- 当前缺口：`Thesis` 的 `bing` 仍未完成（翻译缺失导致 align/detect 不完整）
+- 下一步：执行 `detect_filter.sh` + GPT judge；决定 Thesis 是否补齐或明确跳过口径

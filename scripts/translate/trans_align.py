@@ -31,6 +31,7 @@ def get_align_file(file, output_file, align_tool_path):
     extraction = 'softmax'
     batch_size = 32
     command = [
+    "conda", "run", "-n", "termmt-gpu311",
     "python",
     "{}".format(script_path),
     "--output_file={}".format(output_file),
@@ -81,6 +82,10 @@ def write_lst_to_file(lst, output_path, filename):
 def write_json_to_file(json_data, file_path):
     with open(file_path, 'w') as f:
         json.dump(json_data, f, indent=4, ensure_ascii=False)
+
+def append_jsonl(file_path, obj):
+    with open(file_path, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 # get jieba cutted sentence
 def get_jieba_cutted_sentence(sentence):
@@ -279,12 +284,17 @@ def align_process(output_path, align_tool_path, trans_model):
     logger.info("start to prepare metamorphic_items for judge")
     logger.info(f"start to get term translations and similarities of sentences, time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
     metamorphic_items_aligned = []
+    aligned_jsonl_path = output_path + f"/metamorphic_items_aligned_{trans_model}.jsonl"
+    # reset jsonl for fresh run (real-time persistence)
+    with open(aligned_jsonl_path, 'w', encoding='utf-8') as f:
+        f.write("")
 
     
     for i in tqdm(range(len(metamorphic_items))):
         metamorphic_item = metamorphic_items[i]
         if metamorphic_item == {}:
             metamorphic_items_aligned.append(metamorphic_item)
+            append_jsonl(aligned_jsonl_path, metamorphic_item)
             continue
         origin_sentence = metamorphic_item["originSentence"]
         phrase_term_ids = metamorphic_item["phrase_term_ids"]
@@ -353,6 +363,7 @@ def align_process(output_path, align_tool_path, trans_model):
                 phrase_bertinsert_metamorphic["phrase_bertinsert_term_similarities"] = phrase_bertinsert_term_similarities
 
         metamorphic_items_aligned.append(metamorphic_item)
+        append_jsonl(aligned_jsonl_path, metamorphic_item)
 
     write_json_to_file(metamorphic_items_aligned, output_path+f"/metamorphic_items_aligned_{trans_model}.json")
     logger.info(f"metamorphic_items_aligned saved, time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
